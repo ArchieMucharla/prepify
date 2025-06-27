@@ -1,2 +1,1 @@
 # prepify
-FOUNDER:ARCHIE ; PET RAT: DHRUV

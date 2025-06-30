@@ -7,15 +7,28 @@ import subprocess
 import whisper
 import cv2
 import easyocr
+import json
 
 # Step 1: Download tiktok video
-def download_video(tiktok_url, output_path = "tiktok_video.mp4"):
+def download_video(tiktok_url, output_path = "video/tiktok.mp4"):
     
-    import subprocess # gives access to Python's ability to run shell/terminal commands like you are typing in PowerShell
-
     cmd = f'yt-dlp -o "{output_path}" "{tiktok_url}"' # output_path becomes the new file name, and tiktok_url becomes the actual URL passed
     subprocess.run(cmd, shell=True) # runs the command 
     print("✅ Video downloaded.")
+
+def extract_caption(tiktok_url):
+    cmd = ["yt-dlp", "-j", tiktok_url] # to get video metadata in JSON format
+    result = subprocess.run(cmd, capture_output=True, text=True)    
+
+    if result.returncode != 0:
+        print("Error running yt-dlp for extract_caption")
+        print(result.stderr)
+        return None
+
+    data = json.loads(result.stdout) 
+    caption = data.get("description", "")
+    print(caption)
+    return caption.strip()
 
 # Step 2: Extract frames from the video
 def extract_frames(video_path, output_folder = "frames", fps = 1):
@@ -33,6 +46,7 @@ def transcribe_audio(video_path, model_size = "medium"):
     model = whisper.load_model(model_size) # loads the whisper model
     result = model.transcribe(video_path)
     print("✅ Transcription complete.")
+    
     return result["text"] # returns only the text 
 
 # Step 4: Extract on screen text using OCR (Optical Character Recognition)
@@ -57,16 +71,18 @@ def ocr_frames(frame_folder = "frames", num_frames = 5):
 
 # Main Wrapper Function 
 def run_tiktok_parser(tiktok_url):
-    video_path = "tiktok_video.mp4"
+    video_path = "video/tiktok.mp4"
     frames_folder = "frames"
 
-    download_video(tiktok_url, output_path=video_path)
+    download_video(tiktok_url)
+    caption = extract_caption(tiktok_url) 
     extract_frames(video_path, output_folder=frames_folder)
     transcript = transcribe_audio(video_path)
     ocr_text = ocr_frames(frame_folder=frames_folder)
 
-    print("\n🔤 TRANSCRIPTION:\n", transcript)
-    print("\n📸 OCR TEXT:\n", ocr_text)
+    print("\nCAPTION:\n", caption)
+    print("\nTRANSCRIPTION:\n", transcript)
+    print("\nOCR TEXT:\n", ocr_text)
 
 
 # Entry point

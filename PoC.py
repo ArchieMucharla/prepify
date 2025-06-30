@@ -8,6 +8,13 @@ import whisper
 import cv2
 import easyocr
 import json
+from openai import OpenAI
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+api_key = os.getenv("OPENAI_API_KEY")
+client = OpenAI(api_key=api_key)
 
 # Step 1: Download tiktok video
 def download_video(tiktok_url, output_path = "video/tiktok.mp4"):
@@ -46,7 +53,7 @@ def transcribe_audio(video_path, model_size = "medium"):
     model = whisper.load_model(model_size) # loads the whisper model
     result = model.transcribe(video_path)
     print("✅ Transcription complete.")
-    
+
     return result["text"] # returns only the text 
 
 # Step 4: Extract on screen text using OCR (Optical Character Recognition)
@@ -69,7 +76,27 @@ def ocr_frames(frame_folder = "frames", num_frames = 5):
     print("✅ OCR complete.")
     return texts
 
-# Main Wrapper Function 
+#Step 5 : Parse content extracted to standard9ze format
+def create_recipe(caption, transcript, ocr_text):
+    full_text = "caption: " + caption + " , transcript: "+ transcript + " , ocr text : " + " ".join(ocr_text)
+
+
+    response = client.chat.completions.create(
+        model="o4-mini", 
+            messages=[{ "role": "user","content": f"""
+I have extracted all possible data from a TikTok recipe video: the caption, transcription of audio, and OCR text from frames. Please use reasonable assumptions/inferences about cooking to fill in gaps where content may be missing.
+Please parse this and output a structured recipe in JSON format with:
+- Ingredients (with name, amount, and units)
+- Steps (ordered list)
+- If possible, estimated macros (calories, protein, fat, carbs)
+Here is the content:
+{full_text}
+"""}
+        ] )               
+
+    return response.choices[0].message.content
+
+    
 def run_tiktok_parser(tiktok_url):
     video_path = "video/tiktok.mp4"
     frames_folder = "frames"
@@ -83,6 +110,16 @@ def run_tiktok_parser(tiktok_url):
     print("\nCAPTION:\n", caption)
     print("\nTRANSCRIPTION:\n", transcript)
     print("\nOCR TEXT:\n", ocr_text)
+    result_json = create_recipe(caption, transcript, ocr_text)
+    print("\nPARSED RECIPE:\n", result_json)
+    if os.path.exists("video/tiktok.mp4"):
+        os.remove("video/tiktok.mp4")
+        os.rmdir("video")
+    if os.path.exists("frames"):
+        for file in os.listdir("frames"):
+            os.remove(os.path.join("frames", file))
+        os.rmdir("frames")
+
 
 
 # Entry point

@@ -54,3 +54,22 @@ def ocr_frames(frame_folder = "frames", num_frames = 5):
 
     print("✅ OCR complete.")
     return texts
+
+# Main Wrapper Function 
+def run_tiktok_parser(tiktok_url):
+    video_path = "tiktok_video.mp4"
+    frames_folder = "frames"
+
+    download_video(tiktok_url, output_path=video_path)
+    extract_frames(video_path, output_folder=frames_folder)
+    transcript = transcribe_audio(video_path)
+    ocr_text = ocr_frames(frame_folder=frames_folder)
+
+    print("\n🔤 TRANSCRIPTION:\n", transcript)
+    print("\n📸 OCR TEXT:\n", ocr_text)
+
+
+# Entry point
+if __name__ == "__main__":
+    url = input("Paste TikTok Video URL: ").strip()
+    run_tiktok_parser(url)
